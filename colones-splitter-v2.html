@@ -1,0 +1,2224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="apple-mobile-web-app-title" content="Colón Split">
+  <meta name="theme-color" content="#007aff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <title>Colón Split — CRC / USD</title>
+  <style>
+    /* iOS system aesthetic + liquid glass controls */
+    html {
+      background: #f2f2f7;
+      -webkit-text-size-adjust: 100%;
+      overflow-x: hidden;
+      max-width: 100%;
+    }
+    html[data-theme="dark"] { background: #000000; }
+
+    :root, [data-theme="light"] {
+      --ink: #000000;
+      --muted: rgba(60, 60, 67, 0.6);
+      --canvas: #f2f2f7;
+      --surface: #ffffff;
+      --surface-elevated: rgba(255, 255, 255, 0.72);
+      --fill: rgba(118, 118, 128, 0.12);
+      --fill-strong: rgba(118, 118, 128, 0.2);
+      --input-surface: #f2f2f7;
+      --input-active: #ffffff;
+      --separator: rgba(60, 60, 67, 0.29);
+      --accent: #007aff;
+      --accent-on: #ffffff;
+      --usd-sym: #007aff;
+      --crc-sym: #34c759;
+      --radius: 12px;
+      --radius-lg: 16px;
+      --glass-border: rgba(255, 255, 255, 0.55);
+      --glass-bg: rgba(255, 255, 255, 0.42);
+      --glass-bg-strong: rgba(255, 255, 255, 0.58);
+      --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 1px 3px rgba(0, 0, 0, 0.06);
+      --glass-active: rgba(0, 122, 255, 0.88);
+      --toast-bg: rgba(44, 44, 46, 0.92);
+      --toast-fg: #ffffff;
+    }
+    [data-theme="dark"] {
+      --input-surface: rgba(120, 120, 128, 0.24);
+      --input-active: rgba(44, 44, 46, 0.65);
+      --ink: #ffffff;
+      --muted: rgba(235, 235, 245, 0.6);
+      --canvas: #000000;
+      --surface: #1c1c1e;
+      --surface-elevated: rgba(44, 44, 46, 0.78);
+      --fill: rgba(120, 120, 128, 0.32);
+      --fill-strong: rgba(120, 120, 128, 0.44);
+      --separator: rgba(84, 84, 88, 0.65);
+      --accent: #0a84ff;
+      --accent-on: #ffffff;
+      --usd-sym: #0a84ff;
+      --crc-sym: #30d158;
+      --glass-border: rgba(255, 255, 255, 0.14);
+      --glass-bg: rgba(255, 255, 255, 0.1);
+      --glass-bg-strong: rgba(255, 255, 255, 0.16);
+      --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.35);
+      --glass-active: rgba(10, 132, 255, 0.55);
+      --toast-bg: rgba(242, 242, 247, 0.92);
+      --toast-fg: #000000;
+    }
+
+    * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
+
+    button, .chip, .tab-btn, .btn-primary, .btn-outline, .counter button, .tip-row button {
+      touch-action: manipulation;
+      -webkit-appearance: none;
+      appearance: none;
+      font-family: inherit;
+      transition: transform 0.12s ease, opacity 0.12s ease, background 0.2s ease, box-shadow 0.2s ease;
+    }
+    button:active:not(:disabled) { transform: scale(0.97); opacity: 0.9; }
+
+    /* Liquid glass — primary controls (not tip segments) */
+    .chip, .tab-btn, .btn-primary, .btn-outline, .counter button {
+      border: 1px solid var(--glass-border);
+      background: var(--glass-bg);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      backdrop-filter: blur(20px) saturate(180%);
+      box-shadow: var(--glass-shadow);
+      color: var(--accent);
+    }
+    .chip { color: var(--ink); }
+    .chip-on, .tab-active {
+      background: var(--glass-active);
+      border-color: rgba(255, 255, 255, 0.35);
+      color: var(--accent-on);
+      -webkit-backdrop-filter: blur(24px) saturate(200%);
+      backdrop-filter: blur(24px) saturate(200%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 4px 16px rgba(0, 122, 255, 0.35);
+    }
+    [data-theme="dark"] .chip-on,
+    [data-theme="dark"] .tab-active {
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 4px 20px rgba(10, 132, 255, 0.4);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+      background: var(--canvas);
+      color: var(--ink);
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      min-height: 100dvh;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+      line-height: 1.47;
+      letter-spacing: -0.022em;
+      overscroll-behavior-y: contain;
+      overflow-x: hidden;
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .wrap {
+      max-width: 32rem;
+      width: 100%;
+      margin: 0 auto;
+      padding: max(0.5rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(0, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+    }
+
+    .panel-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+      min-width: 0;
+    }
+    .panel-topbar .section-label { margin-bottom: 0; flex: 1; min-width: 0; }
+    .theme-toggle {
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      padding: 0;
+      flex-shrink: 0;
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .theme-svg {
+      display: block;
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .theme-svg-sun { display: none; }
+    [data-theme="dark"] .theme-svg-moon { display: none; }
+    [data-theme="dark"] .theme-svg-sun { display: block; }
+
+    .header-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin-bottom: 1.25rem;
+      padding-top: 0.125rem;
+    }
+    h1 {
+      font-size: 2.125rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      color: var(--ink);
+    }
+    .subhead { margin-top: 0.25rem; font-size: 1.0625rem; }
+    h2 {
+      font-size: 1.375rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      margin-bottom: 0.75rem;
+    }
+    .section-label {
+      font-size: 0.8125rem;
+      font-weight: 400;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      margin-bottom: 0.35rem;
+    }
+    .muted { color: var(--muted); font-size: 0.9375rem; }
+
+    .panel {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 1.125rem 1.25rem 1.25rem;
+      margin-bottom: 1.125rem;
+      min-width: 0;
+      max-width: 100%;
+      border: none;
+    }
+    [data-theme="light"] .panel {
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04), 0 4px 24px rgba(0, 0, 0, 0.04);
+    }
+    [data-theme="dark"] .panel {
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    /* Text fields & grouped inputs — consistent inset shading */
+    .rate-controls {
+      background: var(--input-surface);
+    }
+    #rate-input.rate-field {
+      background: var(--input-active);
+      box-shadow: inset 0 0 0 0.5px var(--separator);
+    }
+    #convert-stack.inset-group {
+      background: var(--input-surface);
+      box-shadow: inset 0 0 0 0.5px rgba(60, 60, 67, 0.1);
+    }
+    [data-theme="dark"] #convert-stack.inset-group {
+      box-shadow: inset 0 0 0 0.5px var(--separator);
+    }
+    #convert-stack .money-box.is-input {
+      background: var(--input-active);
+    }
+    #convert-stack .money-box:not(.is-input) {
+      opacity: 0.72;
+    }
+    [data-theme="light"] #convert-stack .money-box.is-input {
+      box-shadow: inset 4px 0 0 var(--accent), inset 0 0 0 1px rgba(0, 122, 255, 0.28);
+      background: var(--input-active);
+    }
+    [data-theme="dark"] #convert-stack .money-box.is-input {
+      box-shadow: inset 4px 0 0 var(--accent), inset 0 0 0 0.5px rgba(10, 132, 255, 0.4);
+      background: rgba(10, 132, 255, 0.1);
+    }
+    .bill-row {
+      background: var(--input-surface);
+      box-shadow: inset 0 0 0 0.5px rgba(60, 60, 67, 0.1);
+    }
+    [data-theme="dark"] .bill-row {
+      box-shadow: inset 0 0 0 0.5px var(--separator);
+    }
+    .bill-row input {
+      background: var(--input-active);
+      box-shadow: inset 0 0 0 0.5px var(--separator);
+      border-radius: 10px;
+      margin: 5px 6px 5px 4px;
+    }
+    .bill-row select {
+      background: transparent;
+    }
+    .share-charge-input,
+    .tip-custom-row input[type="text"] {
+      background: var(--input-surface);
+      box-shadow: inset 0 0 0 0.5px rgba(60, 60, 67, 0.12);
+    }
+    [data-theme="dark"] .share-charge-input,
+    [data-theme="dark"] .tip-custom-row input[type="text"] {
+      box-shadow: inset 0 0 0 0.5px var(--separator);
+    }
+    .summary {
+      background: #1c1c1e;
+      box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+    }
+    [data-theme="dark"] .summary {
+      background: #2c2c2e;
+      box-shadow: inset 0 0 0 0.5px var(--separator);
+    }
+    #panel-split .summary .muted {
+      color: rgba(255, 255, 255, 0.55);
+    }
+    [data-theme="light"] .bill-row input {
+      margin: 6px 8px 6px 6px;
+    }
+    [data-theme="light"] .field-lg::placeholder {
+      color: rgba(60, 60, 67, 0.35);
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      max-width: 100%;
+    }
+    .chip {
+      min-height: 44px;
+      padding: 0 1rem;
+      border-radius: 22px;
+      font-weight: 600;
+      font-size: 0.9375rem;
+      cursor: pointer;
+    }
+    .chip-icon { min-width: 44px; width: 44px; padding: 0; font-size: 1.25rem; flex-shrink: 0; }
+    .chip-icon.rate-refresh { font-size: 1.375rem; font-weight: 600; }
+    @keyframes rate-spin {
+      to { transform: rotate(360deg); }
+    }
+    .rate-refresh.is-spinning { animation: rate-spin 0.75s linear infinite; pointer-events: none; }
+    .rate-refresh.is-spinning:active { transform: none; }
+    .rate-refresh:disabled { opacity: 0.45; }
+    .convert-actions { display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0; }
+
+    .rate-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+    .rate-big {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+    }
+    .rate-big span { color: var(--accent); font-weight: 700; }
+    .rate-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      padding: 0.625rem 0.75rem;
+      border-radius: var(--radius-lg);
+      width: 100%;
+    }
+    #rate-input.rate-field {
+      flex: 1 1 6rem;
+      min-width: 5.5rem;
+      max-width: 8rem;
+      text-align: right;
+      font-weight: 600;
+      padding: 0.5rem 0.75rem;
+      border-radius: 10px;
+      border: none;
+      color: var(--ink);
+      -webkit-user-select: text;
+      user-select: text;
+      pointer-events: auto;
+    }
+    input[type="number"], input.amount-input, select {
+      font: inherit;
+      font-size: 16px;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+    }
+    input[type="number"] { -moz-appearance: textfield; }
+    input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      padding: 4px;
+      background: var(--fill);
+      border-radius: var(--radius-lg);
+      margin-bottom: 1rem;
+    }
+    .tab-btn {
+      flex: 1;
+      min-height: 44px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.9375rem;
+      cursor: pointer;
+      color: var(--muted);
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 1.25rem;
+      width: 100%;
+      max-width: 100%;
+    }
+    .main-grid > .panel { min-width: 0; }
+
+    @media (min-width: 900px) {
+      .tabs { display: none; }
+      .main-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+      .wrap { padding-bottom: 2rem; }
+    }
+
+    @media (max-width: 899px) {
+      body.sheet-open .tabs {
+        visibility: hidden;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .main-grid.show-convert #panel-split { display: none; }
+      .main-grid.show-split #panel-convert { display: none; }
+      .tabs {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 50;
+        margin: 0;
+        gap: 0;
+        padding: 10px max(16px, env(safe-area-inset-left)) calc(10px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-right));
+        background: transparent;
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+        border-top: none;
+        border-radius: 0;
+        box-shadow: none;
+        display: flex;
+        justify-content: center;
+      }
+      .tabs::before {
+        content: none;
+      }
+      .tabs {
+        /* floating glass segment dock */
+        --tab-dock-bg: var(--surface-elevated);
+      }
+      .tabs {
+        pointer-events: none;
+      }
+      .tabs .tab-btn {
+        pointer-events: auto;
+      }
+      .tabs {
+        display: grid;
+        grid-template-columns: 1fr;
+        max-width: 100%;
+      }
+      .tabs {
+        padding: 8px max(20px, env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-right));
+      }
+      .tabs-inner {
+        display: flex;
+        gap: 6px;
+        width: 100%;
+        max-width: 22rem;
+        margin: 0 auto;
+        padding: 5px;
+        border-radius: 22px;
+        background: var(--surface-elevated);
+        -webkit-backdrop-filter: saturate(200%) blur(40px);
+        backdrop-filter: saturate(200%) blur(40px);
+        border: 0.5px solid var(--separator);
+        box-shadow:
+          0 0 0 0.5px rgba(255, 255, 255, 0.08) inset,
+          0 8px 32px rgba(0, 0, 0, 0.12),
+          0 2px 8px rgba(0, 0, 0, 0.06);
+        pointer-events: auto;
+        position: relative;
+        z-index: 1;
+      }
+      [data-theme="light"] .tabs-inner {
+        box-shadow:
+          0 0 0 0.5px rgba(255, 255, 255, 0.65) inset,
+          0 12px 40px rgba(0, 0, 0, 0.1),
+          0 2px 6px rgba(0, 0, 0, 0.04);
+      }
+      .tabs .tab-btn {
+        flex: 1;
+        min-height: 50px;
+        font-size: 1rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        border-radius: 17px;
+        border: none;
+        background: transparent;
+        color: var(--muted);
+        box-shadow: none;
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+      }
+      .tabs .tab-btn.tab-active {
+        color: var(--accent-on);
+        background: var(--glass-active);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        backdrop-filter: blur(20px) saturate(180%);
+        border: 0.5px solid rgba(255, 255, 255, 0.25);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.35),
+          0 4px 14px rgba(0, 122, 255, 0.35);
+      }
+      .tabs .tab-btn:not(.tab-active):active {
+        background: var(--fill);
+        opacity: 1;
+      }
+      .wrap { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
+      #toast.show { bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
+      .rate-big { font-size: 1.35rem; width: 100%; }
+      .rate-row { flex-direction: column; align-items: stretch; }
+      h1 { font-size: 1.75rem; }
+      .field-lg { font-size: 1.5rem; }
+      #panel-convert #convert-stack .field-lg { font-size: 2.125rem; }
+      #panel-convert #box-usd .field-lg { font-size: 2.5rem; }
+      #panel-convert #convert-stack .sym { font-size: 1.875rem; }
+      #panel-convert #box-usd .sym-usd { font-size: 2.125rem; }
+      #panel-split .bill-row input { font-size: 1.875rem; }
+      #panel-split .sum-stack .sum-main { font-size: 1.375rem; }
+      #panel-split .sum-total .sum-main { font-size: 1.625rem; }
+      #panel-split .sum-stack .sum-alt { font-size: 0.9375rem; }
+      #panel-split .per-line { font-size: 1.875rem; }
+      .split-stack { gap: 1.125rem; }
+      .tip-row button { font-size: 15px; min-height: 36px; }
+      #panel-split .bill-row select { max-width: 7.25rem; }
+      #panel-split .summary .total > span:last-child { white-space: pre-line; }
+    }
+
+    .is-hidden { display: none !important; }
+    .head-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+    .head-flex h2 { margin-bottom: 0; }
+
+    #convert-stack.inset-group {
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    #convert-stack .money-box {
+      border-radius: 0;
+      background: transparent;
+      border: none;
+      padding: 0.875rem 1rem;
+    }
+    #convert-stack .money-box.is-input {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+    .inset-divider {
+      height: 0.5px;
+      background: var(--separator);
+      margin-left: 1rem;
+    }
+
+    /* Converter — larger, readable amounts */
+    #panel-convert #convert-stack .money-box {
+      padding: 1rem 1.125rem;
+    }
+    #panel-convert #convert-stack .money-label {
+      font-size: 0.9375rem;
+      margin-bottom: 0.35rem;
+    }
+    #panel-convert #convert-stack .field-lg {
+      font-size: 2.0625rem;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+    }
+    #panel-convert #convert-stack .sym {
+      font-size: 1.75rem;
+      font-weight: 700;
+    }
+    #panel-convert #box-usd .field-lg {
+      font-size: 2.375rem;
+      font-weight: 700;
+    }
+    #panel-convert #box-usd .sym-usd {
+      font-size: 2.125rem;
+    }
+    #panel-convert #box-crc .field-lg {
+      font-size: 2.125rem;
+    }
+
+    .money-box {
+      border-radius: var(--radius);
+      padding: 0.875rem 1rem;
+      background: var(--fill);
+      border: 2px solid transparent;
+    }
+    .money-box.is-input {
+      border-color: var(--accent);
+      background: var(--glass-bg-strong);
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
+    }
+    .money-label { font-size: 0.8125rem; font-weight: 500; color: var(--muted); margin-bottom: 0.25rem; display: block; }
+    .input-tag { font-weight: 400; font-size: 0.75rem; }
+    .tip-row button:active { transform: none; opacity: 0.65; }
+    .money-input-row { display: flex; align-items: baseline; gap: 0.35rem; min-width: 0; }
+
+    .sym { font-size: 1.375rem; font-weight: 600; }
+    .sym-usd { color: var(--usd-sym); }
+    .sym-crc { color: var(--crc-sym); }
+    .field-lg {
+      flex: 1;
+      width: 100%;
+      min-width: 0;
+      font-size: 1.75rem;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      border: none;
+      background: transparent;
+      outline: none;
+      color: var(--ink);
+    }
+    .field-lg::placeholder { color: var(--muted); opacity: 0.5; }
+
+    .btn-primary {
+      width: 100%;
+      min-height: 50px;
+      margin-top: 1rem;
+      border-radius: 14px;
+      font-weight: 600;
+      font-size: 1.0625rem;
+      cursor: pointer;
+    }
+    .convert-split-block {
+      margin-top: 1.125rem;
+    }
+    .convert-split-block .section-label {
+      margin-bottom: 0.5rem;
+    }
+    .split-send-row {
+      display: flex;
+      gap: 0.625rem;
+    }
+    .split-send-btn {
+      flex: 1;
+      min-height: 48px;
+      font-size: 1.0625rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      -webkit-backdrop-filter: blur(16px) saturate(160%);
+      backdrop-filter: blur(16px) saturate(160%);
+    }
+    .split-send-btn:active {
+      background: var(--glass-active);
+      border-color: rgba(0, 122, 255, 0.35);
+    }
+    .btn-outline {
+      width: 100%;
+      min-height: 50px;
+      margin-top: 1rem;
+      border-radius: 14px;
+      font-weight: 600;
+      font-size: 1.0625rem;
+      cursor: pointer;
+      background: var(--glass-bg);
+      color: var(--accent);
+    }
+
+    .bill-row {
+      display: flex;
+      width: 100%;
+      min-width: 0;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-bottom: 1.125rem;
+    }
+    .bill-row select {
+      padding: 0.75rem;
+      border: none;
+      border-right: 0.5px solid var(--separator);
+      font-weight: 600;
+      background: transparent;
+      color: var(--accent);
+      flex: 0 0 auto;
+    }
+    .bill-row input {
+      flex: 1 1 0;
+      min-width: 0;
+      text-align: right;
+      padding: 0.65rem 0.75rem;
+      border: none;
+      font-size: 1.35rem;
+      font-weight: 600;
+    }
+
+    /* Bill splitter — large readable amounts */
+    #panel-split .bill-row input {
+      font-size: 1.75rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      padding: 0.75rem 0.875rem;
+    }
+    #panel-split .bill-row select {
+      font-size: 1.0625rem;
+      padding: 0.875rem 0.75rem;
+    }
+    #panel-split .counter span {
+      font-size: 1.5rem;
+    }
+    #panel-split .summary {
+      padding: 0.35rem 1.125rem 0.5rem;
+    }
+    #panel-split .summary > div > .sum-value,
+    #panel-split #line-subtotal,
+    #panel-split #line-tip {
+      font-size: 1.3125rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    #panel-split .sum-total .sum-value,
+    #panel-split #line-total {
+      font-size: 1.5rem;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+    #panel-split .per-line {
+      font-size: 1.75rem;
+      font-weight: 700;
+    }
+    #panel-split .per-line.per-src {
+      font-size: 1.9375rem;
+      font-weight: 800;
+    }
+
+    .split-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      margin-bottom: 1.125rem;
+      min-width: 0;
+    }
+    .control-block { min-width: 0; width: 100%; }
+    .control-block .money-label { margin-bottom: 0.5rem; }
+
+    .counter {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px;
+      border-radius: var(--radius-lg);
+      background: var(--fill);
+      max-width: 11rem;
+    }
+    .counter button {
+      flex: 0 0 44px;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      font-size: 1.25rem;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--accent);
+      line-height: 1;
+      padding: 0;
+    }
+    .counter span {
+      flex: 1;
+      text-align: center;
+      font-size: 1.25rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      min-width: 2ch;
+    }
+
+    /* iOS UISegmentedControl — tip */
+    .tip-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 2px;
+      width: 100%;
+      max-width: 100%;
+      padding: 2px;
+      border-radius: 9px;
+      background: var(--fill-strong);
+      min-width: 0;
+      overflow: hidden;
+      -webkit-backdrop-filter: blur(12px) saturate(150%);
+      backdrop-filter: blur(12px) saturate(150%);
+      border: 0.5px solid var(--separator);
+    }
+    .tip-row button {
+      min-width: 0;
+      width: 100%;
+      min-height: 36px;
+      padding: 0 4px;
+      margin: 0;
+      border: none;
+      border-radius: 7px;
+      font-weight: 500;
+      font-size: 15px;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+      cursor: pointer;
+      color: var(--ink);
+      background: transparent;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      box-shadow: none;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .tip-row button.chip-on {
+      color: var(--ink);
+      background: var(--surface);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+    [data-theme="dark"] .tip-row button.chip-on {
+      background: #636366;
+      color: #ffffff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+    }
+
+    .tip-custom-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 0.5rem;
+      padding: 0.625rem 0.875rem;
+      border-radius: var(--radius);
+      background: var(--input-surface);
+      font-size: 0.9375rem;
+      color: var(--muted);
+    }
+    .tip-custom-row input {
+      width: 3.25rem;
+      text-align: right;
+      border: none;
+      background: transparent;
+      font-weight: 600;
+      font-size: 17px;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+    }
+
+    .summary {
+      border-radius: var(--radius-lg);
+      padding: 0.25rem 1rem;
+      font-size: 0.9375rem;
+      min-width: 0;
+    }
+    .summary > div {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 0;
+      border-bottom: 0.5px solid rgba(255, 255, 255, 0.12);
+      min-width: 0;
+    }
+    .summary > div:last-child { border-bottom: none; }
+    .summary > div > .sum-value,
+    .summary > div > span:last-child {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-weight: 500;
+      overflow-wrap: anywhere;
+    }
+    .sum-subtotal .sum-value,
+    .sum-tip .sum-value,
+    .sum-total .sum-value,
+    .summary .sum-total.total span:first-child {
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .sum-total .sum-value { font-weight: 700; }
+    .sum-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.2rem;
+      line-height: 1.25;
+    }
+    .sum-stack .sum-main {
+      color: #ffffff;
+      font-weight: inherit;
+    }
+    .sum-stack .sum-alt {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.65);
+      letter-spacing: -0.01em;
+    }
+    .sum-stack .sum-pct {
+      font-size: 0.9em;
+      font-weight: 500;
+      opacity: 0.85;
+    }
+    .per-person {
+      padding: 0.75rem 0 0.25rem;
+      text-align: center;
+      border-bottom: none !important;
+      flex-direction: column !important;
+    }
+    .per-amounts {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: center;
+      gap: 0.25rem 0.5rem;
+      line-height: 1.2;
+    }
+    .per-line {
+      font-size: 1.625rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+    }
+    .per-line.per-src {
+      font-size: 1.8125rem;
+      font-weight: 800;
+    }
+    .per-person.src-crc .per-src { /* size only */ }
+    .per-person.src-usd .per-src { /* size only */ }
+    .per-line.per-crc { color: #e6b800; }
+    [data-theme="dark"] .per-line.per-crc { color: #ffd60a; }
+    .per-line.per-usd { color: #34c759; }
+    [data-theme="dark"] .per-line.per-usd { color: #30d158; }
+    .per-person .section-label {
+      color: #ffffff;
+      font-weight: 600;
+      background: none;
+      padding: 0;
+      border-radius: 0;
+      margin-bottom: 0.35rem !important;
+    }
+    .per-sep {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--muted);
+      opacity: 0.5;
+    }
+
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+
+    /* Share sheet — label charge + emoji category */
+    body.sheet-open { overflow: hidden; }
+    .share-sheet {
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 0;
+    }
+    .share-sheet[hidden] {
+      display: none !important;
+      pointer-events: none !important;
+    }
+    .share-scrim {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+    }
+    .share-panel {
+      position: relative;
+      width: 100%;
+      max-width: 28rem;
+      max-height: min(88vh, 640px);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 20px 20px 0 0;
+      padding: 0 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+      background: var(--surface);
+      box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.15);
+    }
+    [data-theme="dark"] .share-panel { box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.5); }
+    .share-handle {
+      width: 36px;
+      height: 5px;
+      border-radius: 3px;
+      background: var(--separator);
+      margin: 0.5rem auto 1rem;
+    }
+    .share-panel h2 {
+      font-size: 1.375rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    .share-charge-row {
+      display: flex;
+      align-items: stretch;
+      gap: 0.5rem;
+      margin: 0.75rem 0 1rem;
+      min-width: 0;
+    }
+    .share-charge-input {
+      flex: 1;
+      min-width: 0;
+      margin: 0;
+      padding: 0.875rem 1rem;
+      border: none;
+      border-radius: var(--radius-lg);
+      font-size: 17px;
+      color: var(--ink);
+    }
+    .share-charge-clear {
+      flex-shrink: 0;
+      min-width: 52px;
+      padding: 0 1rem;
+      border-radius: var(--radius-lg);
+      font-weight: 600;
+      font-size: 0.9375rem;
+      cursor: pointer;
+      color: var(--accent);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      -webkit-backdrop-filter: blur(16px) saturate(160%);
+      backdrop-filter: blur(16px) saturate(160%);
+    }
+    .share-categories {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .share-cat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25rem;
+      min-height: 4.25rem;
+      padding: 0.5rem 0.25rem;
+      border-radius: 14px;
+      font-size: 1.625rem;
+      line-height: 1;
+      cursor: pointer;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      -webkit-backdrop-filter: blur(16px) saturate(160%);
+      backdrop-filter: blur(16px) saturate(160%);
+    }
+    .share-cat span {
+      font-size: 0.625rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.15;
+      max-width: 100%;
+    }
+    .share-cat.chip-on {
+      background: var(--glass-active);
+      border-color: rgba(0, 122, 255, 0.35);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 10px rgba(0, 122, 255, 0.2);
+    }
+    .share-cat.chip-on span { color: var(--accent); }
+    .share-actions {
+      display: flex;
+      gap: 0.625rem;
+    }
+    .share-actions .btn-outline,
+    .share-actions .btn-primary { flex: 1; min-height: 50px; }
+
+    #toast {
+      display: none;
+      position: fixed;
+      left: 50%;
+      bottom: calc(1.25rem + env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      padding: 0.75rem 1.25rem;
+      border-radius: 14px;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      z-index: 9999;
+      max-width: calc(100vw - 2rem);
+      text-align: center;
+      background: var(--toast-bg);
+      color: var(--toast-fg);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+    #toast.show { display: block; }
+
+    #rate-easter-trigger {
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+      margin: 0;
+    }
+
+    .fx-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 9998;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .fx-layer[hidden] { display: none !important; }
+    #fx-fireworks {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <section class="panel" aria-label="Exchange rate">
+      <div class="panel-topbar">
+        <p class="section-label" id="rate-easter-trigger">Exchange rate</p>
+        <button type="button" class="theme-toggle chip chip-icon" id="btn-theme" aria-pressed="false" aria-label="Switch to dark mode">
+          <svg class="theme-svg theme-svg-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor" stroke="none"/></svg>
+          <svg class="theme-svg theme-svg-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41"/></svg>
+        </button>
+      </div>
+      <div class="rate-row">
+        <p class="rate-big">1 USD = <span id="rate-display">455.46</span> CRC</p>
+        <div class="rate-controls">
+          <label class="sr-only" for="rate-input">CRC per USD</label>
+          <input id="rate-input" class="rate-field" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" value="455.46" aria-label="CRC per USD">
+          <span class="muted">CRC/USD</span>
+          <button type="button" class="chip chip-icon rate-refresh" id="btn-fetch-rate" aria-label="Refresh exchange rate from the web" title="Refresh rate">↻</button>
+          <button type="button" class="chip" id="btn-reset-rate">Reset</button>
+        </div>
+      </div>
+      <p id="rate-meta" class="muted" style="margin-top:0.35rem;">Editable · works offline</p>
+    </section>
+
+    <div class="tabs" role="tablist" aria-label="Main">
+      <div class="tabs-inner">
+        <button type="button" class="tab-btn tab-active" data-tab="convert" role="tab" aria-selected="true">Convert</button>
+        <button type="button" class="tab-btn" data-tab="split" role="tab" aria-selected="false">Split</button>
+      </div>
+    </div>
+
+    <div class="main-grid show-convert" id="main-grid">
+      <section class="panel" id="panel-convert" aria-labelledby="h-convert">
+        <div class="head-flex">
+          <h2 id="h-convert">Converter</h2>
+          <div class="convert-actions">
+            <button type="button" class="chip chip-clear" id="btn-clear">Clear</button>
+            <button type="button" class="chip chip-icon" id="btn-swap" title="Swap — input currency moves to top">⇄</button>
+          </div>
+        </div>
+        <div class="inset-group" id="convert-stack">
+          <div class="money-box money-crc is-input" id="box-crc" data-currency="crc">
+            <span class="money-label" id="label-crc">Costa Rican Colones <span class="muted input-tag">(input)</span></span>
+            <div class="money-input-row">
+              <span class="sym sym-crc">₡</span>
+              <input id="crc-input" class="field-lg amount-input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="0">
+            </div>
+          </div>
+          <div class="inset-divider" aria-hidden="true"></div>
+          <div class="money-box money-usd" id="box-usd" data-currency="usd">
+            <span class="money-label" id="label-usd">US Dollars</span>
+            <div class="money-input-row">
+              <span class="sym sym-usd">$</span>
+              <input id="usd-input" class="field-lg amount-input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="0">
+            </div>
+          </div>
+        </div>
+        <div class="convert-split-block">
+          <p class="section-label">Split</p>
+          <div class="split-send-row" role="group" aria-label="Send amount to bill splitter">
+            <button type="button" class="chip split-send-btn" id="btn-split-crc">Colones</button>
+            <button type="button" class="chip split-send-btn" id="btn-split-usd">USD</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-split" aria-labelledby="h-split">
+        <h2 id="h-split">Bill splitter</h2>
+        <label class="money-label" for="bill-amount">Bill total</label>
+        <div class="bill-row">
+          <select id="bill-currency">
+            <option value="CRC">₡ CRC</option>
+            <option value="USD">$ USD</option>
+          </select>
+          <input id="bill-amount" class="amount-input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="0">
+        </div>
+        <div class="split-stack">
+          <div class="control-block">
+            <span class="money-label">People</span>
+            <div class="counter">
+              <button type="button" id="people-minus" aria-label="Fewer people">−</button>
+              <span id="people-count">2</span>
+              <button type="button" id="people-plus" aria-label="More people">+</button>
+            </div>
+          </div>
+          <div class="control-block">
+            <span class="money-label">Tip</span>
+            <div class="tip-row" id="tip-buttons">
+              <button type="button" class="tip-btn chip-on" data-tip="0">0%</button>
+              <button type="button" class="tip-btn" data-tip="10">10%</button>
+              <button type="button" class="tip-btn" data-tip="15">15%</button>
+              <button type="button" class="tip-btn" data-tip="20">20%</button>
+            </div>
+            <div class="tip-custom-row">
+              <span>Custom tip</span>
+              <div>
+                <input id="tip-input" type="number" min="0" max="100" value="0" aria-label="Custom tip percent">
+                <span>%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="summary">
+          <div class="sum-row sum-subtotal"><span class="muted">Subtotal</span><span class="sum-value sum-stack" id="line-subtotal">—</span></div>
+          <div class="sum-row sum-tip"><span class="muted">Tip</span><span class="sum-value sum-stack" id="line-tip">—</span></div>
+          <div class="sum-row sum-total total"><span>Total</span><span class="sum-value sum-stack" id="line-total">—</span></div>
+          <div class="per-person src-crc" id="per-person-block">
+            <p class="section-label" style="margin-bottom:0.35rem;">Each person pays</p>
+            <div class="per-amounts">
+              <span class="per-line per-src" id="per-primary">—</span>
+              <span class="per-sep" aria-hidden="true">·</span>
+              <span class="per-line per-alt" id="per-secondary">—</span>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn-outline" id="btn-copy-breakdown">Share</button>
+      </section>
+    </div>
+  </div>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <div id="fx-layer" class="fx-layer" hidden aria-hidden="true">
+    <canvas id="fx-fireworks" aria-hidden="true"></canvas>
+  </div>
+
+  <div id="share-sheet" class="share-sheet" hidden aria-hidden="true">
+    <div class="share-scrim" id="share-scrim" aria-hidden="true"></div>
+    <div class="share-panel" role="dialog" aria-modal="true" aria-labelledby="share-title">
+      <div class="share-handle" aria-hidden="true"></div>
+      <h2 id="share-title">Share summary</h2>
+      <p class="muted">What was this charge for?</p>
+      <div class="share-charge-row">
+        <input type="text" class="share-charge-input" id="share-charge-input" placeholder="e.g. Dinner at the sodita" maxlength="120" autocomplete="off" spellcheck="true">
+        <button type="button" class="share-charge-clear" id="share-charge-clear" aria-label="Clear description">Clear</button>
+      </div>
+      <p class="section-label">Category</p>
+      <div class="share-categories" id="share-categories">
+        <button type="button" class="share-cat chip-on" data-emoji="🍽️" data-cat="Restaurant" data-title="Food">🍽️<span>Food</span></button>
+        <button type="button" class="share-cat" data-emoji="⛽" data-cat="Gas" data-title="Gas">⛽<span>Gas</span></button>
+        <button type="button" class="share-cat" data-emoji="🎫" data-cat="Tickets" data-title="Tickets">🎫<span>Tickets</span></button>
+        <button type="button" class="share-cat" data-emoji="🛒" data-cat="Groceries" data-title="Store">🛒<span>Store</span></button>
+        <button type="button" class="share-cat" data-emoji="☕" data-cat="Coffee" data-title="Coffee">☕<span>Coffee</span></button>
+        <button type="button" class="share-cat" data-emoji="🚕" data-cat="Transport" data-title="Ride">🚕<span>Ride</span></button>
+        <button type="button" class="share-cat" data-emoji="🏨" data-cat="Hotel" data-title="Hotel">🏨<span>Hotel</span></button>
+        <button type="button" class="share-cat" data-emoji="🎉" data-cat="Activity" data-title="Fun">🎉<span>Fun</span></button>
+        <button type="button" class="share-cat" data-emoji="🛍️" data-cat="Shopping" data-title="Shop">🛍️<span>Shop</span></button>
+        <button type="button" class="share-cat" data-emoji="🍹" data-cat="Drinks" data-title="Drinks">🍹<span>Drinks</span></button>
+        <button type="button" class="share-cat" data-emoji="🏖️" data-cat="Beach" data-title="Beach">🏖️<span>Beach</span></button>
+        <button type="button" class="share-cat" data-emoji="📋" data-cat="Other" data-title="Other">📋<span>Other</span></button>
+      </div>
+      <div class="share-actions">
+        <button type="button" class="btn-outline" id="share-cancel">Cancel</button>
+        <button type="button" class="btn-primary" id="share-confirm">Share</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+(function () {
+  var DEFAULT_RATE = 455.46;
+  var THEME_KEY = 'colon-split-theme';
+  var rate = DEFAULT_RATE;
+  var people = 2;
+  var mobileTab = 'convert';
+  /** @type {'usd'|'crc'} currency shown on top and driving conversion */
+  var inputCurrency = 'crc';
+
+  function $(id) { return document.getElementById(id); }
+
+  function toast(msg) {
+    var el = $('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function () {
+      el.classList.remove('show');
+      el.textContent = '';
+    }, 2200);
+  }
+
+  function fmtUSD(n) {
+    return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function fmtCRC(n) {
+    return '₡' + Math.round(n).toLocaleString('en-US');
+  }
+
+  function parseAmount(str) {
+    if (str == null) return NaN;
+    var s = String(str).replace(/,/g, '').trim();
+    if (!s || s === '.' || s === '-' || s === '-.') return NaN;
+    return parseFloat(s);
+  }
+
+  /** Live thousands separators while typing (CRC — whole colones). */
+  function formatCrcTyping(raw) {
+    var s = String(raw).replace(/,/g, '').replace(/[^\d]/g, '');
+    if (!s) return '';
+    return Number(s).toLocaleString('en-US');
+  }
+
+  /** Live commas + up to 2 decimals while typing (USD). */
+  function formatUsdTyping(raw) {
+    var s = String(raw).replace(/,/g, '');
+    var endsDot = s.length > 0 && s.charAt(s.length - 1) === '.';
+    s = s.replace(/[^\d.]/g, '');
+    var dot = s.indexOf('.');
+    var intStr = dot === -1 ? s : s.slice(0, dot);
+    var decStr = dot === -1 ? '' : s.slice(dot + 1).replace(/\./g, '').slice(0, 2);
+    intStr = intStr.replace(/\D/g, '');
+    if (!intStr && !decStr && !endsDot) return '';
+    var intFmt = intStr === '' ? '0' : Number(intStr).toLocaleString('en-US');
+    if (dot === -1 && !endsDot) return intFmt;
+    if (endsDot && !decStr) return intFmt + '.';
+    return intFmt + '.' + decStr;
+  }
+
+  function applyTypingFormat(el, formatter) {
+    var neu = formatter(el.value);
+    if (neu !== el.value) {
+      el.value = neu;
+      try {
+        el.setSelectionRange(neu.length, neu.length);
+      } catch (_) {}
+    }
+  }
+
+  function formatUsdOut(n) {
+    if (!isFinite(n)) return '';
+    var r = Math.round(n * 100) / 100;
+    return r.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function formatCrcOut(n) {
+    if (!isFinite(n)) return '';
+    return Math.round(n).toLocaleString('en-US');
+  }
+
+  function formatBillField() {
+    var el = $('bill-amount');
+    var cur = $('bill-currency').value;
+    var v = parseAmount(el.value);
+    if (!isFinite(v) || v <= 0) return;
+    el.value = cur === 'CRC' ? formatCrcOut(v) : formatUsdOut(v);
+  }
+
+  function applyTheme(dark) {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    var btn = $('btn-theme');
+    btn.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+    btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch (_) {}
+  }
+
+  function initTheme() {
+    var stored = null;
+    try { stored = localStorage.getItem(THEME_KEY); } catch (_) {}
+    if (stored === 'dark' || stored === 'light') {
+      applyTheme(stored === 'dark');
+      return;
+    }
+    try {
+      applyTheme(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    } catch (_) {
+      applyTheme(false);
+    }
+  }
+
+  function syncRate() {
+    var el = $('rate-input');
+    if (document.activeElement !== el) {
+      el.value = formatUsdOut(rate);
+    }
+    $('rate-display').textContent = rate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function applyRateFromField() {
+    var el = $('rate-input');
+    var v = parseAmount(el.value);
+    if (!isFinite(v) || v <= 0) return false;
+    rate = v;
+    $('rate-display').textContent = rate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return true;
+  }
+
+  function updateInputLabels() {
+    var usdBox = $('box-usd');
+    var crcBox = $('box-crc');
+    var usdLabel = $('label-usd');
+    var crcLabel = $('label-crc');
+    if (inputCurrency === 'usd') {
+      usdBox.classList.add('is-input');
+      crcBox.classList.remove('is-input');
+      usdLabel.innerHTML = 'US Dollars <span class="muted input-tag">(input)</span>';
+      crcLabel.textContent = 'Costa Rican Colones';
+    } else {
+      crcBox.classList.add('is-input');
+      usdBox.classList.remove('is-input');
+      crcLabel.innerHTML = 'Costa Rican Colones <span class="muted input-tag">(input)</span>';
+      usdLabel.textContent = 'US Dollars';
+    }
+  }
+
+  function setInputCurrency(cur) {
+    inputCurrency = cur;
+    updateInputLabels();
+  }
+
+  /** Reorder rows only when user taps ⇄ (not while typing). */
+  function orderConvertBoxes() {
+    var stack = $('convert-stack');
+    var usd = $('box-usd');
+    var crc = $('box-crc');
+    var divider = stack.querySelector('.inset-divider');
+    if (inputCurrency === 'usd') {
+      stack.appendChild(usd);
+      if (divider) stack.appendChild(divider);
+      stack.appendChild(crc);
+    } else {
+      stack.appendChild(crc);
+      if (divider) stack.appendChild(divider);
+      stack.appendChild(usd);
+    }
+    updateInputLabels();
+  }
+
+  function recalcFromInput() {
+    var usdEl = $('usd-input');
+    var crcEl = $('crc-input');
+    if (inputCurrency === 'usd') {
+      var usd = parseAmount(usdEl.value);
+      if (isNaN(usd) || usd === 0) {
+        if (document.activeElement !== crcEl) crcEl.value = '';
+        return;
+      }
+      if (document.activeElement !== crcEl) crcEl.value = formatCrcOut(usd * rate);
+    } else {
+      var crc = parseAmount(crcEl.value);
+      if (isNaN(crc) || crc === 0) {
+        if (document.activeElement !== usdEl) usdEl.value = '';
+        return;
+      }
+      if (document.activeElement !== usdEl) usdEl.value = formatUsdOut(crc / rate);
+    }
+  }
+
+  function setSumStack(id, mainHtml, altText) {
+    var el = $(id);
+    el.innerHTML = '<span class="sum-main">' + mainHtml + '</span><span class="sum-alt">' + altText + '</span>';
+  }
+
+  function calcSplit() {
+    var billRaw = $('bill-amount').value;
+    var tip = parseFloat($('tip-input').value) || 0;
+    $('people-count').textContent = String(people);
+
+    if (!String(billRaw).trim()) {
+      $('line-subtotal').textContent = '—';
+      $('line-tip').innerHTML = '<span class="sum-main">— <span class="sum-pct">(' + tip + '%)</span></span>';
+      $('line-total').textContent = '—';
+      $('per-primary').textContent = '—';
+      $('per-secondary').textContent = '—';
+      return;
+    }
+
+    var bill = parseAmount(billRaw) || 0;
+    var cur = $('bill-currency').value;
+    var subUSD = cur === 'USD' ? bill : bill / rate;
+    var tipUSD = subUSD * (tip / 100);
+    var totalUSD = subUSD + tipUSD;
+    var perUSD = people > 0 ? totalUSD / people : 0;
+    var perCRC = perUSD * rate;
+
+    var subCRC = subUSD * rate;
+    var tipCRC = tipUSD * rate;
+    var totalCRC = totalUSD * rate;
+
+    setSumStack('line-subtotal',
+      cur === 'CRC' ? fmtCRC(subCRC) : fmtUSD(subUSD),
+      cur === 'CRC' ? fmtUSD(subUSD) : fmtCRC(subCRC));
+    setSumStack('line-tip',
+      (cur === 'CRC' ? fmtCRC(tipCRC) : fmtUSD(tipUSD)) + ' <span class="sum-pct">(' + tip + '%)</span>',
+      cur === 'CRC' ? fmtUSD(tipUSD) : fmtCRC(tipCRC));
+    setSumStack('line-total',
+      cur === 'CRC' ? fmtCRC(totalCRC) : fmtUSD(totalUSD),
+      cur === 'CRC' ? fmtUSD(totalUSD) : fmtCRC(totalCRC));
+
+    var perBlock = $('per-person-block');
+    perBlock.classList.remove('src-crc', 'src-usd');
+    perBlock.classList.add(cur === 'CRC' ? 'src-crc' : 'src-usd');
+    var perPri = $('per-primary');
+    var perSec = $('per-secondary');
+    if (cur === 'CRC') {
+      perPri.textContent = fmtCRC(perCRC);
+      perPri.className = 'per-line per-src per-crc';
+      perSec.textContent = fmtUSD(perUSD);
+      perSec.className = 'per-line per-alt per-usd';
+    } else {
+      perPri.textContent = fmtUSD(perUSD);
+      perPri.className = 'per-line per-src per-usd';
+      perSec.textContent = fmtCRC(perCRC);
+      perSec.className = 'per-line per-alt per-crc';
+    }
+  }
+
+  function setTip(p) {
+    p = Math.max(0, Math.min(100, p));
+    $('tip-input').value = p;
+    var btns = document.querySelectorAll('.tip-btn');
+    for (var i = 0; i < btns.length; i++) {
+      var on = Number(btns[i].getAttribute('data-tip')) === p;
+      btns[i].classList.toggle('chip-on', on);
+    }
+    calcSplit();
+  }
+
+  function getShareCategory() {
+    var on = document.querySelector('.share-cat.chip-on');
+    if (!on) return { emoji: '📋', cat: 'Other', title: 'Other' };
+    return {
+      emoji: on.getAttribute('data-emoji') || '📋',
+      cat: on.getAttribute('data-cat') || 'Other',
+      title: on.getAttribute('data-title') || on.getAttribute('data-cat') || 'Other'
+    };
+  }
+
+  function buildShare() {
+    var bill = parseAmount($('bill-amount').value) || 0;
+    var cur = $('bill-currency').value;
+    var tip = parseFloat($('tip-input').value) || 0;
+    var subUSD = cur === 'USD' ? bill : bill / rate;
+    var totalUSD = subUSD * (1 + tip / 100);
+    var perUSD = people > 0 ? totalUSD / people : 0;
+    var perCRC = perUSD * rate;
+    var meta = getShareCategory();
+    var charge = ($('share-charge-input') && $('share-charge-input').value) ? $('share-charge-input').value.trim() : '';
+    var headline = meta.emoji;
+    if (charge) headline += ' ' + charge;
+    else headline += ' ' + (meta.title || meta.cat);
+    var lines = [
+      headline,
+      '',
+      'Colón Split',
+      'Bill: ' + (cur === 'CRC' ? fmtCRC(bill) : fmtUSD(bill)),
+      'Tip: ' + tip + '% · ' + people + ' people',
+      'Total: ' + (cur === 'CRC' ? fmtCRC(totalUSD * rate) : fmtUSD(totalUSD)),
+      'Each pays: ' + fmtUSD(perUSD) + ' (' + fmtCRC(perCRC) + ')',
+      'Rate: 1 USD = ' + rate.toFixed(2) + ' CRC'
+    ];
+    return lines.join('\n');
+  }
+
+  function focusShareChargeInput(inp) {
+    if (!inp) inp = $('share-charge-input');
+    if (!inp) return;
+    function attempt() {
+      try {
+        inp.focus({ preventScroll: true });
+      } catch (_) {
+        try { inp.focus(); } catch (_2) {}
+      }
+      try {
+        inp.setSelectionRange(inp.value.length, inp.value.length);
+      } catch (_) {}
+    }
+    attempt();
+    requestAnimationFrame(function () {
+      requestAnimationFrame(attempt);
+    });
+    setTimeout(attempt, 80);
+    setTimeout(attempt, 220);
+  }
+
+  function openShareSheet() {
+    ensureOverlayClean();
+    blurFocusFromHiddenPanel();
+    var sheet = $('share-sheet');
+    sheet.hidden = false;
+    sheet.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('sheet-open');
+    var on = document.querySelector('.share-cat.chip-on');
+    var inp = $('share-charge-input');
+    if (inp && on && !inp.value.trim()) {
+      var title = on.getAttribute('data-title');
+      if (title) inp.value = title;
+    }
+  }
+
+  function closeShareSheet() {
+    var sheet = $('share-sheet');
+    sheet.hidden = true;
+    sheet.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('sheet-open');
+    shareInFlight = false;
+  }
+
+  function ensureOverlayClean() {
+    shareInFlight = false;
+    var sheet = $('share-sheet');
+    if (sheet && sheet.hidden) {
+      document.body.classList.remove('sheet-open');
+    }
+  }
+
+  /** iOS breaks touches/share if focus stays inside display:none panel after tab switch. */
+  function blurFocusFromHiddenPanel() {
+    var ae = document.activeElement;
+    if (!ae || ae === document.body || ae === document.documentElement) return;
+    if (typeof ae.blur !== 'function') return;
+    var narrow = !window.matchMedia('(min-width: 900px)').matches;
+    if (!narrow) return;
+    var conv = $('panel-convert');
+    var spl = $('panel-split');
+    if (mobileTab === 'split' && conv && conv.contains(ae)) ae.blur();
+    if (mobileTab === 'convert' && spl && spl.contains(ae)) ae.blur();
+  }
+
+  function setPanelInert() {
+    var conv = $('panel-convert');
+    var spl = $('panel-split');
+    var narrow = !window.matchMedia('(min-width: 900px)').matches;
+    if (!narrow) {
+      conv.removeAttribute('inert');
+      spl.removeAttribute('inert');
+      return;
+    }
+    if (mobileTab === 'split') {
+      conv.setAttribute('inert', '');
+      spl.removeAttribute('inert');
+    } else {
+      spl.setAttribute('inert', '');
+      conv.removeAttribute('inert');
+    }
+  }
+
+  function restoreAppChrome() {
+    closeShareSheet();
+    shareInFlight = false;
+    document.body.classList.remove('sheet-open');
+    blurFocusFromHiddenPanel();
+    var inp = $('share-charge-input');
+    if (inp && document.activeElement === inp) {
+      try { inp.blur(); } catch (_) {}
+    }
+  }
+
+  function activateMobileTab(tab) {
+    closeShareSheet();
+    mobileTab = tab;
+    var tabs = document.querySelectorAll('[data-tab]');
+    for (var x = 0; x < tabs.length; x++) {
+      var on = tabs[x].getAttribute('data-tab') === mobileTab;
+      tabs[x].classList.toggle('tab-active', on);
+      tabs[x].setAttribute('aria-selected', on ? 'true' : 'false');
+    }
+    blurFocusFromHiddenPanel();
+    ensureOverlayClean();
+    applyLayout();
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { toast('Copied'); }).catch(function () {
+        window.prompt('Copy this text:', text);
+      });
+    } else {
+      window.prompt('Copy this text:', text);
+      toast('Select and copy');
+    }
+  }
+
+  function isAppleMobile() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
+  /** Call synchronously from a tap handler — iOS requires a fresh user gesture. */
+  function shareSystemSheet(text) {
+    if (typeof navigator.share !== 'function') {
+      return Promise.reject(new Error('unsupported'));
+    }
+    var payload = { text: String(text) };
+    return navigator.share(payload);
+  }
+
+  var shareInFlight = false;
+
+  function shareOrCopySummary() {
+    if (shareInFlight) return;
+    if (!String($('bill-amount').value || '').trim()) {
+      toast('Enter a bill total first');
+      return;
+    }
+    var text = buildShare();
+    blurFocusFromHiddenPanel();
+    var ae = document.activeElement;
+    if (ae && ae !== document.body && typeof ae.blur === 'function') {
+      ae.blur();
+    }
+
+    /* Dismiss emoji sheet before iOS share so tab bar works when user returns / cancels */
+    closeShareSheet();
+
+    shareInFlight = true;
+    var done = function () {
+      shareInFlight = false;
+    };
+
+    if (typeof navigator.share !== 'function') {
+      done();
+      if (isAppleMobile()) {
+        try {
+          window.location.href = 'sms:&body=' + encodeURIComponent(text);
+          closeShareSheet();
+          return;
+        } catch (_) {}
+      }
+      copyText(text);
+      closeShareSheet();
+      return;
+    }
+
+    var p;
+    try {
+      p = shareSystemSheet(text);
+    } catch (err) {
+      done();
+      copyText(text);
+      closeShareSheet();
+      return;
+    }
+
+    p.then(function () {
+      done();
+      toast('Shared');
+    }).catch(function (err) {
+      done();
+      if (err && err.name === 'AbortError') return;
+      if (isAppleMobile()) {
+        try {
+          window.location.href = 'sms:&body=' + encodeURIComponent(text);
+          toast('Opening Messages…');
+          return;
+        } catch (_) {}
+      }
+      copyText(text);
+    });
+  }
+
+  function applyLayout() {
+    var grid = $('main-grid');
+    var wide = window.matchMedia('(min-width: 900px)').matches;
+    if (wide) {
+      grid.classList.remove('show-convert', 'show-split');
+      $('panel-convert').classList.remove('is-hidden');
+      $('panel-split').classList.remove('is-hidden');
+      setPanelInert();
+      return;
+    }
+    grid.classList.toggle('show-convert', mobileTab === 'convert');
+    grid.classList.toggle('show-split', mobileTab === 'split');
+    $('panel-convert').classList.remove('is-hidden');
+    $('panel-split').classList.remove('is-hidden');
+    setPanelInert();
+    blurFocusFromHiddenPanel();
+  }
+
+  function clearConverter() {
+    $('usd-input').value = '';
+    $('crc-input').value = '';
+    var top = inputCurrency === 'usd' ? $('usd-input') : $('crc-input');
+    try { top.focus(); } catch (_) {}
+    calcSplit();
+    toast('Cleared');
+  }
+
+  function swapConvert() {
+    inputCurrency = inputCurrency === 'usd' ? 'crc' : 'usd';
+    orderConvertBoxes();
+    recalcFromInput();
+    calcSplit();
+    toast(inputCurrency === 'crc' ? 'Colones on top (input)' : 'Dollars on top (input)');
+  }
+
+  var eggTapTimes = [];
+  var eggRunning = false;
+  var eggFwFrame = null;
+
+  function cleanupEasterEgg() {
+    eggRunning = false;
+    if (eggFwFrame) {
+      cancelAnimationFrame(eggFwFrame);
+      eggFwFrame = null;
+    }
+    var layer = $('fx-layer');
+    var canvas = $('fx-fireworks');
+    if (layer) {
+      layer.hidden = true;
+      layer.setAttribute('aria-hidden', 'true');
+    }
+    if (canvas) {
+      var ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+  }
+
+  function setupFireworksCanvas(canvas) {
+    var ctx = canvas.getContext('2d', { alpha: true });
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    return { ctx: ctx, w: w, h: h };
+  }
+
+  function runFireworks(canvas) {
+    var setup = setupFireworksCanvas(canvas);
+    var ctx = setup.ctx;
+    var w = setup.w;
+    var h = setup.h;
+    var rockets = [];
+    var particles = [];
+    var palette = [
+      ['#ff6b6b', '#ffd93d', '#ffffff'],
+      ['#4ecdc4', '#a8e6cf', '#ffffff'],
+      ['#ff9ff3', '#f368e0', '#ffffff'],
+      ['#54a0ff', '#5f27cd', '#48dbfb'],
+      ['#ff9f43', '#ff6348', '#ffeaa7']
+    ];
+    var SHOW_MAX_MS = 5000;
+    var LAUNCH_STOP_MS = 3200;
+    var HARD_END_MS = 6200;
+    var startMs = performance.now();
+    var lastMs = startMs;
+    var launchAcc = 0;
+    var launchEvery = 0.34;
+
+    function ringBurst(x, y, pal) {
+      var n = 72;
+      var i;
+      for (i = 0; i < n; i++) {
+        var ang = (Math.PI * 2 * i) / n + (Math.random() - 0.5) * 0.18;
+        var spd = 160 + Math.random() * 240;
+        particles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          life: 1,
+          decay: 0.55 + Math.random() * 0.35,
+          c: pal[Math.floor(Math.random() * pal.length)],
+          trail: [],
+          spark: Math.random() < 0.48
+        });
+      }
+      for (i = 0; i < 24; i++) {
+        var a2 = Math.random() * Math.PI * 2;
+        var sp2 = 40 + Math.random() * 90;
+        particles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(a2) * sp2,
+          vy: Math.sin(a2) * sp2,
+          life: 0.85,
+          decay: 0.7 + Math.random() * 0.4,
+          c: '#fff',
+          trail: [],
+          spark: true
+        });
+      }
+    }
+
+    function launchRocket() {
+      rockets.push({
+        x: w * (0.16 + Math.random() * 0.68),
+        y: h + 10,
+        vy: -240 - Math.random() * 130,
+        targetY: h * (0.07 + Math.random() * 0.44),
+        pal: palette[Math.floor(Math.random() * palette.length)],
+        trail: []
+      });
+    }
+
+    function drawRocketTrail(rk) {
+      ctx.fillStyle = '#fffaf0';
+      ctx.beginPath();
+      ctx.arc(rk.x, rk.y, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+      if (rk.trail.length < 2) return;
+      var t;
+      ctx.strokeStyle = 'rgba(255, 230, 200, 0.65)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(rk.trail[0].x, rk.trail[0].y);
+      for (t = 1; t < rk.trail.length; t++) {
+        ctx.lineTo(rk.trail[t].x, rk.trail[t].y);
+      }
+      ctx.stroke();
+    }
+
+    function shouldEndFireworks(elapsedMs) {
+      if (elapsedMs < SHOW_MAX_MS) return false;
+      if (elapsedMs >= HARD_END_MS) return true;
+      return rockets.length === 0 && particles.length === 0;
+    }
+
+    function frame(now) {
+      var dt = Math.min(0.032, (now - lastMs) / 1000);
+      if (dt <= 0) dt = 0.016;
+      lastMs = now;
+      var elapsedMs = now - startMs;
+
+      ctx.clearRect(0, 0, w, h);
+
+      if (elapsedMs < LAUNCH_STOP_MS) {
+        launchAcc += dt;
+        while (launchAcc >= launchEvery) {
+          launchAcc -= launchEvery;
+          launchRocket();
+        }
+      }
+
+      var ri;
+      for (ri = rockets.length - 1; ri >= 0; ri--) {
+        var rk = rockets[ri];
+        rk.trail.push({ x: rk.x, y: rk.y });
+        if (rk.trail.length > 14) rk.trail.shift();
+        rk.y += rk.vy * dt;
+        rk.vy += 18 * dt;
+        drawRocketTrail(rk);
+        if (rk.y <= rk.targetY || rk.vy >= -20) {
+          ringBurst(rk.x, rk.y, rk.pal);
+          rockets.splice(ri, 1);
+        }
+      }
+
+      ctx.globalCompositeOperation = 'lighter';
+      var j;
+      for (j = particles.length - 1; j >= 0; j--) {
+        var p = particles[j];
+        p.trail.push({ x: p.x, y: p.y });
+        if (p.trail.length > 8) p.trail.shift();
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 95 * dt;
+        p.vx *= Math.pow(0.985, dt * 60);
+        p.life -= p.decay * dt;
+        if (p.life <= 0) {
+          particles.splice(j, 1);
+          continue;
+        }
+        var alpha = Math.min(1, p.life);
+        ctx.globalAlpha = alpha;
+        if (p.spark && p.trail.length > 1) {
+          ctx.strokeStyle = p.c;
+          ctx.lineWidth = 1.2 + alpha;
+          ctx.beginPath();
+          ctx.moveTo(p.trail[0].x, p.trail[0].y);
+          var ti;
+          for (ti = 1; ti < p.trail.length; ti++) {
+            ctx.lineTo(p.trail[ti].x, p.trail[ti].y);
+          }
+          ctx.lineTo(p.x, p.y);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = p.c;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 1.4 + alpha * 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+
+      if (!shouldEndFireworks(elapsedMs)) {
+        eggFwFrame = requestAnimationFrame(frame);
+      } else {
+        eggFwFrame = null;
+        ctx.clearRect(0, 0, w, h);
+        cleanupEasterEgg();
+      }
+    }
+
+    launchRocket();
+    launchRocket();
+    eggFwFrame = requestAnimationFrame(frame);
+  }
+
+  function runEasterEgg() {
+    if (eggRunning) return;
+    eggRunning = true;
+    closeShareSheet();
+    blurFocusFromHiddenPanel();
+    var layer = $('fx-layer');
+    var canvas = $('fx-fireworks');
+    if (!layer || !canvas) {
+      eggRunning = false;
+      return;
+    }
+    layer.hidden = false;
+    layer.setAttribute('aria-hidden', 'false');
+    runFireworks(canvas);
+  }
+
+  function onRateEasterTap() {
+    if (eggRunning) return;
+    var now = Date.now();
+    eggTapTimes.push(now);
+    eggTapTimes = eggTapTimes.filter(function (t) { return now - t <= 3000; });
+    if (eggTapTimes.length >= 5) {
+      eggTapTimes = [];
+      runEasterEgg();
+    }
+  }
+
+  function amountForSplitCurrency(targetCur) {
+    var crc = parseAmount($('crc-input').value);
+    var usd = parseAmount($('usd-input').value);
+    if (targetCur === 'CRC') {
+      if (crc > 0) return { cur: 'CRC', amt: formatCrcOut(crc) };
+      if (usd > 0 && rate > 0) return { cur: 'CRC', amt: formatCrcOut(usd * rate) };
+    } else {
+      if (usd > 0) return { cur: 'USD', amt: formatUsdOut(usd) };
+      if (crc > 0 && rate > 0) return { cur: 'USD', amt: formatUsdOut(crc / rate) };
+    }
+    return null;
+  }
+
+  function sendToBillSplit(targetCur) {
+    var picked = amountForSplitCurrency(targetCur);
+    if (!picked) {
+      toast('Enter an amount in the converter first');
+      return;
+    }
+    $('bill-currency').value = picked.cur;
+    $('bill-amount').value = picked.amt;
+    calcSplit();
+    blurFocusFromHiddenPanel();
+    if (document.activeElement && document.activeElement.blur) {
+      document.activeElement.blur();
+    }
+    ensureOverlayClean();
+    if (!window.matchMedia('(min-width: 900px)').matches) {
+      activateMobileTab('split');
+    }
+    toast(targetCur === 'CRC' ? 'Bill set in colones' : 'Bill set in dollars');
+  }
+
+  function fetchRate() {
+    var btn = $('btn-fetch-rate');
+    if (!btn) return;
+    btn.disabled = true;
+    btn.classList.add('is-spinning');
+    fetch('https://open.er-api.com/v6/latest/USD')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var crc = data && data.rates && data.rates.CRC;
+        if (!crc) throw new Error('no rate');
+        rate = crc;
+        syncRate();
+        recalcFromInput();
+        calcSplit();
+        $('rate-meta').textContent = 'Live rate · ' + new Date().toLocaleString();
+        toast('Rate updated');
+      })
+      .catch(function () {
+        toast('Rate fetch blocked — use manual rate');
+      })
+      .finally(function () {
+        btn.disabled = false;
+        btn.classList.remove('is-spinning');
+      });
+  }
+
+  function wire() {
+    $('btn-theme').addEventListener('click', function () {
+      var dark = document.documentElement.getAttribute('data-theme') !== 'dark';
+      applyTheme(dark);
+    });
+
+    var eggTrig = $('rate-easter-trigger');
+    if (eggTrig) {
+      eggTrig.addEventListener('pointerup', function (e) {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        onRateEasterTap();
+      });
+    }
+
+    $('rate-input').addEventListener('input', function () {
+      applyTypingFormat(this, formatUsdTyping);
+      if (applyRateFromField()) {
+        recalcFromInput();
+        calcSplit();
+      }
+    });
+    $('rate-input').addEventListener('blur', function () {
+      if (!applyRateFromField()) syncRate();
+      else $('rate-input').value = formatUsdOut(rate);
+    });
+    $('btn-reset-rate').addEventListener('click', function () {
+      rate = DEFAULT_RATE;
+      syncRate();
+      recalcFromInput();
+      calcSplit();
+      toast('Rate reset');
+    });
+    $('btn-fetch-rate').addEventListener('click', fetchRate);
+
+    $('usd-input').addEventListener('focus', function () { setInputCurrency('usd'); });
+    $('usd-input').addEventListener('input', function () {
+      applyTypingFormat(this, formatUsdTyping);
+      setInputCurrency('usd');
+      recalcFromInput();
+      calcSplit();
+    });
+    $('crc-input').addEventListener('focus', function () { setInputCurrency('crc'); });
+    $('crc-input').addEventListener('input', function () {
+      applyTypingFormat(this, formatCrcTyping);
+      setInputCurrency('crc');
+      recalcFromInput();
+      calcSplit();
+    });
+    $('btn-swap').addEventListener('click', swapConvert);
+    $('btn-clear').addEventListener('click', clearConverter);
+
+    $('btn-split-crc').addEventListener('click', function () { sendToBillSplit('CRC'); });
+    $('btn-split-usd').addEventListener('click', function () { sendToBillSplit('USD'); });
+
+    $('bill-amount').addEventListener('input', function () {
+      var cur = $('bill-currency').value;
+      applyTypingFormat(this, cur === 'CRC' ? formatCrcTyping : formatUsdTyping);
+      calcSplit();
+    });
+    $('bill-amount').addEventListener('blur', formatBillField);
+    $('bill-currency').addEventListener('change', function () {
+      formatBillField();
+      calcSplit();
+    });
+    $('tip-input').addEventListener('input', calcSplit);
+    $('people-minus').addEventListener('click', function () { people = Math.max(1, people - 1); calcSplit(); });
+    $('people-plus').addEventListener('click', function () { people = Math.min(30, people + 1); calcSplit(); });
+
+    var tipBtns = document.querySelectorAll('.tip-btn');
+    for (var i = 0; i < tipBtns.length; i++) {
+      tipBtns[i].addEventListener('click', function () { setTip(Number(this.getAttribute('data-tip'))); });
+    }
+
+    $('btn-copy-breakdown').addEventListener('click', openShareSheet);
+
+    $('share-cancel').addEventListener('click', closeShareSheet);
+    $('share-scrim').addEventListener('click', closeShareSheet);
+    $('share-confirm').addEventListener('click', function (e) {
+      e.preventDefault();
+      shareOrCopySummary();
+    });
+
+    $('share-charge-clear').addEventListener('click', function () {
+      var inp = $('share-charge-input');
+      inp.value = '';
+      try { inp.focus(); } catch (_) {}
+    });
+
+    var shareCats = document.querySelectorAll('.share-cat');
+    for (var s = 0; s < shareCats.length; s++) {
+      shareCats[s].addEventListener('click', function () {
+        for (var c = 0; c < shareCats.length; c++) shareCats[c].classList.remove('chip-on');
+        this.classList.add('chip-on');
+        var cat = this.getAttribute('data-cat') || '';
+        var title = this.getAttribute('data-title') || '';
+        var inp = $('share-charge-input');
+        if (!inp) return;
+        if (cat === 'Other') {
+          inp.value = '';
+          focusShareChargeInput(inp);
+        } else if (title) {
+          inp.value = title;
+        }
+      });
+    }
+
+    var tabs = document.querySelectorAll('[data-tab]');
+    for (var t = 0; t < tabs.length; t++) {
+      tabs[t].addEventListener('click', function () {
+        activateMobileTab(this.getAttribute('data-tab'));
+      });
+    }
+    window.addEventListener('resize', applyLayout);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) restoreAppChrome();
+    });
+    window.addEventListener('pageshow', function () {
+      restoreAppChrome();
+    });
+  }
+
+  function boot() {
+    try {
+      initTheme();
+      syncRate();
+      updateInputLabels();
+      recalcFromInput();
+      setTip(0);
+      calcSplit();
+      applyLayout();
+      wire();
+    } catch (err) {
+      document.body.classList.add('boot-failed');
+      console.error(err);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js', { scope: './' }).catch(function () {});
+    });
+  }
+})();
+  </script>
+</body>
+</html>
